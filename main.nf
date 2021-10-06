@@ -130,8 +130,6 @@ process amplified_intervals {
       	python2 /home/programs/AmpliconArchitect-master/src/amplified_intervals.py \\
                   --gain 4.5 --cnsize_min 50000 --ref GRCh38 \\
                   --bed ${cnvkit_bed}  --out ${cnvkit_bed.baseName}.aa.bed
-
-
       """
     //debug mode
     else
@@ -146,71 +144,66 @@ process amplified_intervals {
       """
 }
 
-
+//we sync both crams+selected seeds
+//we have to sync the xHLA, VEP ouputs and pvac input
+seed_crams=ampinter_seeds.join(aa_input)
+//pvac_hla_vep=pvactools_input.join(xHLA_xVEP,remainder: true)
 //we run the amplicon architect tool
+process amplicon_architect{
+  cpus params.cpu
+  memory params.mem+'G'
 
+   publishDir params.output_folder+'/amplicon_predictions/', mode: 'copy'
+   input:
+   set val(tumor_id), file(cnvseeds),file(cram),file(cram_index) from seed_crams
+   file (aa_repo_dir_path)
+   file (mosek_license)
 
+   output:
+   set val(tumor_id), file("${tumor_id}.aa") into aa_results
+   set val(tumor_id), file("${tumor_id}.aa.done") into aa_results_log
 
-
-// // Annnot the VCF with VEP tools
-// //create a local VEP database (gencode 33) ~ 16Gb size
-// //vep_install -a cf -s homo_sapiens -y GRCh38 -c vep-db-99 --CONVERT
-// //https://pvactools.readthedocs.io/en/latest/pvacseq/input_file_prep/vep.html
-// process VEP {
-//  cpus params.cpu
-//  memory params.mem+'G'
-//
-//   publishDir params.output_folder+'/VEP/', mode: 'copy'
-//   input:
-//   set val(tumor_id), file(vcf), file(normal), file(normal_index), val(normal_id), val(tumor_id_name) from xVEP_input
-//   file (vep_dir_path)
-//   output:
-//     set val(tumor_id), file("${tumor_id}.vep.vcf") into xVEP_out
-//   script:
-//        """
-//         vep -i ${vcf} \\
-//         -o ${tumor_id}.vep.vcf \\
-//         --cache --offline \\
-//         --dir_cache ${vep_dir_path} \\
-//         --format vcf \\
-//         --vcf \\
-//         --symbol  \\
-//         --terms SO \\
-//         --tsl \\
-//         --hgvs \\
-//         --fasta ${vep_dir_path}/homo_sapiens/99_GRCh38/Homo_sapiens.GRCh38.dna.toplevel.fa.gz \\
-//         --plugin Frameshift \\
-//         --plugin Wildtype \\
-//         --dir_plugins ${baseDir}/VEP_plugins \\
-//         --pick  --transcript_version
-// 	# we remove the VAF from the VCF
-// 	bcftools annotate -x  FORMAT/AF ${tumor_id}.vep.vcf > ${tumor_id}.vep.noAF.vcf
-// 	mv ${tumor_id}.vep.noAF.vcf ${tumor_id}.vep.vcf
-//        """
-// }
-//
-// //we have to sync the xHLA, VEP ouputs and pvac input
-// xHLA_xVEP=xHLA_out.join(xVEP_out, remainder: true)
-// pvac_hla_vep=pvactools_input.join(xHLA_xVEP,remainder: true)
-//
-// process pVactools {
-//  cpus params.cpu
-//  memory params.mem+'G'
-//
-//   publishDir params.output_folder+'/pVACTOOLS/', mode: 'copy'
-//   input:
-//   set val(tumor_id), file(vcf), file(normal), file(normal_index), val(normal_id), val(tumor_id_name), file(hla_dir_out),file(vcf_vep) from pvac_hla_vep
-//
-//   output:
-//     set val(tumor_id), path("${tumor_id}*_pvactools") into pVACTOOLS_out
-//     file("${tumor_id}.pvactools.log")
-//   script:
-//        """
-//          perl ${baseDir}/scripts/pbactools_wrapper.pl -a ${hla_dir_out} \\
-//             -b ${baseDir}/db/xHLA2PVAC_alleles.txt -c ${normal_id}   -d ${vcf_vep} -t ${tumor_id_name} -p ${tumor_id} \\
-//             -e ${params.pvactools_predictors} > ${tumor_id}.pvactools.log
-//        """
-// }
+   script:
+     if(params.debug == false)
+        """
+       #we select the seeds with amplidied intervals using the ref genome
+         mkdir ${tumor_id}.aa
+         cd ${tumor_id}.aa
+         touch coverage.stats
+         export MOSEKLM_LICENSE_FILE=${mosek_license}
+         export AA_DATA_REPO=${aa_repo_dir_path}
+         #ln  -s ${aa_repo_dir_path} .
+         n_s=`wc -l ../${cnvseeds}  | awk '{print \$1}'`
+         if [[ \$n_s -gt 0 && \$n_s -lt 71 ]]
+          then
+            python2 /home/programs/AmpliconArchitect-master/src/AmpliconArchitect.py \\
+                            --bed ../${cnvseeds} --bam ../${cram} --out ${tumor_id} --ref GRCh38
+            echo "running amplicon architect, ${tumor_id} with the right number of seeds (\$n_s)" > ../${tumor_id}.aa.done
+          else
+            echo "canceling amplicon architect run, ${tumor_id} with no (0) or many (>70) seeds (\$n_s)" > ../${tumor_id}.aa.done
+          fi
+         """
+     //debug mode
+     else
+       """
+       #we select the seeds with amplidied intervals using the ref genome
+         mkdir ${tumor_id}.aa
+         cd ${tumor_id}.aa
+         touch coverage.stats
+         export MOSEKLM_LICENSE_FILE=${mosek_license}
+         export AA_DATA_REPO=${aa_repo_dir_path}
+         #ln  -s ${aa_repo_dir_path} .
+         n_s=`wc -l ../${cnvseeds}  | awk '{print \$1}'`
+         if [[ \$n_s -gt 0 && \$n_s -lt 71 ]]
+          then
+            echo python2 /home/programs/AmpliconArchitect-master/src/AmpliconArchitect.py \\
+                            --bed ../${cnvseeds} --bam ../${cram} --out ${tumor_id} --ref GRCh38
+            echo "running amplicon architect, ${tumor_id} with the right number of seeds (\$n_s)" > ../${tumor_id}.aa.done
+          else
+            echo "canceling amplicon architect run, ${tumor_id} with no (0) or many (>70) seeds (\$n_s)" > ../${tumor_id}.aa.done
+          fi
+        """
+}
 
 
 /*
