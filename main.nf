@@ -84,7 +84,7 @@ process cnvkit {
       #we run the cnvkit program
       cnvkit.py batch -m wgs -y -r ${aa_repo_dir_path}/GRCh38_cnvkit_filtered_ref.cnn -p 1 -d ${tumor_id} ${cram}
       #step 2
-      cnvkit.py batch segment -p 1 -o ${tumor_id}/${cram.baseName}.segment.cns ${tumor_id}/${cram.baseName}.cnr
+      cnvkit.py segment -p 1 -o ${tumor_id}/${cram.baseName}.segment.cns ${tumor_id}/${cram.baseName}.cnr
       #step 3 creates ${tumor_id}/${cram.baseName}_CNV_GAIN.bed
       python2 ${baseDir}/aux_scripts/select_seeds_cnvkit.py -o ${tumor_id} --sorted_bam ${cram}
       #we copy the cnv selected seeds
@@ -95,7 +95,7 @@ process cnvkit {
       """
       echo cnvkit.py batch -m wgs -y -r ${aa_repo_dir_path}/GRCh38_cnvkit_filtered_ref.cnn -p 1 -d ${tumor_id} ${cram}
       #step 2
-      echo cnvkit.py batch segment -p 1 -o ${tumor_id}/${cram.baseName}.segment.cns ${tumor_id}/${cram.baseName}.cnr
+      echo cnvkit.py segment -p 1 -o ${tumor_id}/${cram.baseName}.segment.cns ${tumor_id}/${cram.baseName}.cnr
       #step 3 creates ${tumor_id}/${cram.baseName}_CNV_GAIN.bed
       echo python2 ${baseDir}/aux_scripts/select_seeds_cnvkit.py -o ${tumor_id} --sorted_bam ${cram}
       #we copy the cnv selected seeds
@@ -126,10 +126,10 @@ process amplified_intervals {
        """
       #we select the seeds with amplidied intervals using the ref genome
         export MOSEKLM_LICENSE_FILE=${mosek_license}
-        export AA_DATA_REPO=${aa_repo_dir_path}
+        export AA_DATA_REPO=\$PWD
       	python2 /home/programs/AmpliconArchitect-master/src/amplified_intervals.py \\
                   --gain 4.5 --cnsize_min 50000 --ref GRCh38 \\
-                  --bed ${cnvkit_bed}  --out ${cnvkit_bed.baseName}.aa.bed
+                  --bed ${cnvkit_bed}  --out ${cnvkit_bed.baseName}.aa
       """
     //debug mode
     else
@@ -161,46 +161,45 @@ process amplicon_architect{
 
    output:
    set val(tumor_id), file("${tumor_id}.aa") into aa_results
-   set val(tumor_id), file("${tumor_id}.aa.done") into aa_results_log
+   set val(tumor_id), file("${tumor_id}_aa_summary.txt") into aa_results_log
 
    script:
      if(params.debug == false)
         """
+         export MOSEKLM_LICENSE_FILE=\$PWD/mosek.lic
+         export AA_DATA_REPO=\$PWD
+         touch coverage.stats
        #we select the seeds with amplidied intervals using the ref genome
          mkdir ${tumor_id}.aa
          cd ${tumor_id}.aa
-         touch coverage.stats
-         export MOSEKLM_LICENSE_FILE=${mosek_license}
-         export AA_DATA_REPO=${aa_repo_dir_path}
          #ln  -s ${aa_repo_dir_path} .
          n_s=`wc -l ../${cnvseeds}  | awk '{print \$1}'`
          if [[ \$n_s -gt 0 && \$n_s -lt 71 ]]
           then
             python2 /home/programs/AmpliconArchitect-master/src/AmpliconArchitect.py \\
                             --bed ../${cnvseeds} --bam ../${cram} --out ${tumor_id} --ref GRCh38
-            echo "running amplicon architect, ${tumor_id} with the right number of seeds (\$n_s)" > ../${tumor_id}.aa.done
+	    cp ${tumor_id}_summary.txt ../${tumor_id}_aa_summary.txt
           else
-            echo "canceling amplicon architect run, ${tumor_id} with no (0) or many (>70) seeds (\$n_s)" > ../${tumor_id}.aa.done
+            echo "canceling amplicon architect run, ${tumor_id} with no (0) or many (>70) seeds (\$n_s)" > ../${tumor_id}_aa_summary.txt
           fi
          """
      //debug mode
      else
        """
        #we select the seeds with amplidied intervals using the ref genome
+         export MOSEKLM_LICENSE_FILE=\$PWD/mosek.lic
+         export AA_DATA_REPO=\$PWD
+         touch coverage.stats
          mkdir ${tumor_id}.aa
          cd ${tumor_id}.aa
-         touch coverage.stats
-         export MOSEKLM_LICENSE_FILE=${mosek_license}
-         export AA_DATA_REPO=${aa_repo_dir_path}
-         #ln  -s ${aa_repo_dir_path} .
          n_s=`wc -l ../${cnvseeds}  | awk '{print \$1}'`
          if [[ \$n_s -gt 0 && \$n_s -lt 71 ]]
           then
             echo python2 /home/programs/AmpliconArchitect-master/src/AmpliconArchitect.py \\
                             --bed ../${cnvseeds} --bam ../${cram} --out ${tumor_id} --ref GRCh38
-            echo "running amplicon architect, ${tumor_id} with the right number of seeds (\$n_s)" > ../${tumor_id}.aa.done
+            echo "running amplicon architect, ${tumor_id} with the right number of seeds (\$n_s)" > ../${tumor_id}_aa_summary.txt
           else
-            echo "canceling amplicon architect run, ${tumor_id} with no (0) or many (>70) seeds (\$n_s)" > ../${tumor_id}.aa.done
+            echo "canceling amplicon architect run, ${tumor_id} with no (0) or many (>70) seeds (\$n_s)" > ../${tumor_id}_aa_summary.txt
           fi
         """
 }
