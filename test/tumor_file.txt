@@ -1,0 +1,7 @@
+id	cram
+XXT1	XXT1.cram
+XXT2	XXT2.cram
+XXT3	XXT3.cram
+XXT4	XXT4.cram
+XXT5	XXT5.cram
+XXT6	XXT6.cram

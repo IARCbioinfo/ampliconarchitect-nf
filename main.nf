@@ -158,7 +158,7 @@ process amplicon_architect{
    file (mosek_license)
 
    output:
-   set val(tumor_id), file("${tumor_id}.aa") into aa_results
+   file("${tumor_id}.aa") into aa_results
    set val(tumor_id), file("${tumor_id}_aa_summary.txt") into aa_results_log
 
    script:
@@ -202,6 +202,47 @@ process amplicon_architect{
         """
 }
 
+
+//we gatther all the amplicon architect results to compute amplicon classes
+process amplicon_classifier{
+  cpus params.cpu
+  memory params.mem+'G'
+
+   publishDir params.output_folder+'/amplicon_classes/', mode: 'copy'
+   input:
+   file("*.aa") from aa_results.collect()
+   file (aa_repo_dir_path)
+   file (mosek_license)
+
+   output:
+   file("all_amplicons*") into aa_clases
+
+   script:
+     if(params.debug == false)
+        """
+         export MOSEKLM_LICENSE_FILE=\$PWD/mosek.lic
+         export AA_DATA_REPO=\$PWD
+         #we find all the amplicon results
+         find \$PWD -name "*_cycles.txt" | sed 's/_cycles.txt//' | \\
+         awk '{split(\$0,a,"/"); print a[length(a)]" "\$0"_cycles.txt "\$0"_graph.txt"}' > all_amplicons.txt
+         #we run amplicon classifier
+         python2 /home/programs/AmpliconClassifier/amplicon_classifier.py --ref GRCh38 --input all_amplicons.txt
+       """
+     //debug mode
+     else
+       """
+       export MOSEKLM_LICENSE_FILE=\$PWD/mosek.lic
+       export AA_DATA_REPO=\$PWD
+       #we find all the amplicon results
+       find \$PWD -name "*_cycles.txt" | sed 's/_cycles.txt//' | \\
+       awk '{split(\$0,a,"/"); print a[length(a)]" "\$0"_cycles.txt "\$0"_graph.txt"}' > all_amplicons.txt
+       #we run amplicon classifier
+       echo python2 /home/programs/AmpliconClassifier/amplicon_classifier.py --ref GRCh38 --input all_amplicons.txt
+       touch all_amplicons.txt all_amplicons_gene_list.tsv
+       mkdir all_amplicons_classification_bed_files
+       touch all_amplicons_amplicon_classification_profiles.tsv
+       """
+}
 
 /*
 *
