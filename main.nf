@@ -145,9 +145,7 @@ process amplified_intervals {
 }
 
 //we sync both crams+selected seeds
-//we have to sync the xHLA, VEP ouputs and pvac input
 seed_crams=ampinter_seeds.join(aa_input)
-//pvac_hla_vep=pvactools_input.join(xHLA_xVEP,remainder: true)
 //we run the amplicon architect tool
 process amplicon_architect{
   cpus params.cpu
