@@ -7,9 +7,9 @@ Nextflow pipeline to discover ecDNA in cancer genomes.
   #using a tn_pairs file
   nextflow run iarcbioinfo/ampliconarchitect-nf -r v1.0 \ 
   -profile singularity  --tumor_file tumor_file.txt \
-  --cohort_dir $PWD/CRAM \
-  --ref hs38DH.fa --ref_dict hs38DH.dict \
-  --output_folder PURPLE
+  --cram_dir $PWD/CRAM \
+  --moseklm_license mosek.lic --aa_repo_dir GRCh38 \
+  --output_folder ecDNA_public1
   
   #testing a small fake run
    nextflow run iarcbioinfo/ampliconarchitect-nf -r v1.0 \ 
@@ -25,7 +25,7 @@ Nextflow pipeline to discover ecDNA in cancer genomes.
 
 Obtain license file mosek.lic (https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/).
 
-### Amplicon architect repo
+### Amplicon architect repository
 To run amplicon architect is necessary to download the Amplicon Architect repository from [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk), currently we have tested this nextflow pipeline with GRCh38 genome built.
 
 You can avoid installing all the external software by only installing Docker or singularity.
