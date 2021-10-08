@@ -269,7 +269,7 @@ def parse_tumorfile (tumor_file,path_cram,cram){
 // print the calling parameter to the log and a log file
 def print_params () {
   //software versions for v2.0
-  def software_versions = ['cnvkit' : '0.8.9',
+  def software_versions = ['cnvkit' : '0.9.8',
                            'ampliconarchitect' : '1.2']
   //we print the parameters
   log.info "\n"
