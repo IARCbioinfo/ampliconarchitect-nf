@@ -49,16 +49,6 @@ if(params.tumor_file){
  tumors_crams.into {cnvkit_input; aa_input}
 }
 
-// //chanel for reference genome
-// ref_fasta = Channel.value(file(params.ref)).ifEmpty{exit 1, "reference file not found: ${params.ref}"}
-// ref_fai = Channel.value(file(params.ref+'.fai')).ifEmpty{exit 1, "index file not found: ${params.ref}.fai"}
-// //BWA indexes for re-mapping MHC reads
-// ref_sa  = file(params.ref+'.sa')
-// ref_bwt =  file(params.ref+'.bwt')
-// ref_ann =  file(params.ref+'.ann')
-// ref_amb =  file(params.ref+'.amb')
-// ref_pac =  file(params.ref+'.pac')
-
 aa_repo_dir_path = file(params.aa_repo_dir)
 mosek_license=file(params.moseklm_license)
 
