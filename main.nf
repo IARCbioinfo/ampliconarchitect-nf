@@ -223,7 +223,7 @@ process amplicon_classifier{
          export MOSEKLM_LICENSE_FILE=\$PWD/mosek.lic
          export AA_DATA_REPO=\$PWD
          #we find all the amplicon results
-         find \$PWD -name "*_cycles.txt" | sed 's/_cycles.txt//' | \\
+         find -L \$PWD -name "*_cycles.txt" | sed 's/_cycles.txt//' | \\
          awk '{split(\$0,a,"/"); print a[length(a)]" "\$0"_cycles.txt "\$0"_graph.txt"}' > all_amplicons.txt
          #we run amplicon classifier
          python2 /home/programs/AmpliconClassifier/amplicon_classifier.py --ref GRCh38 --input all_amplicons.txt
